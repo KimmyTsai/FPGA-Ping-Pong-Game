@@ -1,0 +1,19 @@
+
+State Machine - |final|checkkeypad:u_ck|keypadBuf
+Name keypadBuf.1111 keypadBuf.1110 keypadBuf.1101 keypadBuf.1100 keypadBuf.1011 keypadBuf.1010 keypadBuf.1001 keypadBuf.1000 keypadBuf.0111 keypadBuf.0110 keypadBuf.0101 keypadBuf.0100 keypadBuf.0011 keypadBuf.0010 keypadBuf.0001 keypadBuf.0000 
+keypadBuf.0000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+keypadBuf.0001 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 
+keypadBuf.0010 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 
+keypadBuf.0011 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 
+keypadBuf.0100 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 1 
+keypadBuf.0101 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 1 
+keypadBuf.0110 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 
+keypadBuf.0111 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1 
+keypadBuf.1000 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 1 
+keypadBuf.1001 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 1 
+keypadBuf.1010 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 1 
+keypadBuf.1011 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1 
+keypadBuf.1100 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 
+keypadBuf.1101 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 1 
+keypadBuf.1110 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 1 
+keypadBuf.1111 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 
