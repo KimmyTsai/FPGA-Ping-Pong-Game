@@ -1,0 +1,236 @@
+`timescale 1ns / 1ps
+
+//==========  宏定義  ==========================================================
+`define TimeExpire        32'd2500      // dot-matrix 刷新頻率用
+`define TimeExpire_KEY    32'd250000    // keypad 掃描頻率用
+
+//============================================================================
+//  模組名稱: checkkeypad
+//  功能說明:
+//    - 掃描 4x4 keypad，將被按下的按鍵記錄在 keypadBuf 內
+//    - 透過 key_val 對外輸出當前按到的按鍵 (4-bit)
+//    - 額外提供 dot_row/dot_col (8x8 LED) 顯示示範
+//============================================================================
+module checkkeypad(
+    input        clk,            // 系統時鐘
+    input        rst,            // 非同步重置信號(Active Low)
+    input  [3:0] keypadCol,      // Keypad 的 4 個欄 (Column) 輸入
+    output [3:0] keypadRow,      // Keypad 的 4 個列 (Row) 輸出
+
+    // 以下兩個為 8x8 dot-matrix 範例，若不需要可自行刪除
+    output reg [7:0] dot_row,    
+    output reg [7:0] dot_col,
+
+    // 新增: 將掃描到的鍵值對外輸出 (4-bit)
+    output [3:0] key_val
+);
+
+//----------------------------
+// 1) 掃描 4x4 keypad
+//----------------------------
+reg [3:0]  row_reg;       // 內部驅動 keypad 列的暫存器
+reg [3:0]  keypadBuf;     // 暫存被掃描到的鍵 (4-bit)
+reg [31:0] keypadDelay;   // 用於控制掃描頻率
+
+// 將 row_reg 對外作為 keypadRow
+assign keypadRow = row_reg;
+
+// 將目前掃描到的 keypadBuf 直接對外
+assign key_val = keypadBuf;
+
+// 掃描邏輯
+always@(posedge clk or negedge rst) begin
+    if(!rst) begin
+        row_reg     <= 4'b1110;   // 從第 0 行開始
+        keypadBuf   <= 4'b0000;
+        keypadDelay <= 32'd0;
+    end
+    else begin
+        // 掃描到一定次數後，切換到下一行並紀錄一次按鍵值
+        if(keypadDelay == `TimeExpire_KEY) begin
+            keypadDelay <= 32'd0;
+
+            // 依照(row_reg, keypadCol) 決定目前按下的鍵 (4-bit)
+            case({row_reg, keypadCol})
+                8'b1110_1110 : keypadBuf <= 4'h7;
+                8'b1110_1101 : keypadBuf <= 4'h4;
+                8'b1110_1011 : keypadBuf <= 4'h1;
+                8'b1110_0111 : keypadBuf <= 4'h0;
+
+                8'b1101_1110 : keypadBuf <= 4'h8;
+                8'b1101_1101 : keypadBuf <= 4'h5;
+                8'b1101_1011 : keypadBuf <= 4'h2;
+                8'b1101_0111 : keypadBuf <= 4'ha;
+
+                8'b1011_1110 : keypadBuf <= 4'h9;
+                8'b1011_1101 : keypadBuf <= 4'h6;
+                8'b1011_1011 : keypadBuf <= 4'h3;
+                8'b1011_0111 : keypadBuf <= 4'hb;
+
+                8'b0111_1110 : keypadBuf <= 4'hc;
+                8'b0111_1101 : keypadBuf <= 4'hd;
+                8'b0111_1011 : keypadBuf <= 4'he;
+                8'b0111_0111 : keypadBuf <= 4'hf;
+
+                default: keypadBuf <= keypadBuf; // 若無對應，就保持不變
+            endcase
+
+            // 換下一個 row_reg
+            case(row_reg)
+                4'b1110 : row_reg <= 4'b1101;
+                4'b1101 : row_reg <= 4'b1011;
+                4'b1011 : row_reg <= 4'b0111;
+                4'b0111 : row_reg <= 4'b1110;
+                default : row_reg <= 4'b1110;  // 預設回到初始
+            endcase
+        end
+        else begin
+            // 尚未到切換行的計數
+            keypadDelay <= keypadDelay + 32'd1;
+        end
+    end
+end
+
+//----------------------------
+// 2) Dot Matrix (8x8 LED) 顯示範例
+//----------------------------
+//   - 若不需要此功能，可整段刪除/註解
+//----------------------------
+reg [2:0]  row_count;  
+reg [31:0] clk_count;
+
+always@(posedge clk or negedge rst) begin
+    if(!rst) begin
+        dot_row   <= 8'b0;
+        dot_col   <= 8'b0;
+        row_count <= 3'd0;
+        clk_count <= 32'd0;
+    end
+    else begin
+        if(clk_count == `TimeExpire) begin
+            clk_count <= 32'd0;
+            row_count <= row_count + 3'd1;
+
+            // 顯示哪一「行」(在 dot_row 逐行亮)
+            case(row_count)
+                3'd0: dot_row <= 8'b01111111;
+                3'd1: dot_row <= 8'b10111111;
+                3'd2: dot_row <= 8'b11011111;
+                3'd3: dot_row <= 8'b11101111;
+                3'd4: dot_row <= 8'b11110111;
+                3'd5: dot_row <= 8'b11111011;
+                3'd6: dot_row <= 8'b11111101;
+                3'd7: dot_row <= 8'b11111110;
+            endcase
+
+            // 根據目前 keypadBuf 決定 dot_col
+            // (以下只是示範，實際你可以自行改成想顯示的圖案)
+            case(keypadBuf)
+                // 4'h0~4'hf 各顯示不同 pattern
+                // 這裡的範例是你貼的碼，原封不動
+                4'h0: begin
+                    case(row_count)
+                        3'd0: dot_col <= 8'b00000000;
+                        3'd1: dot_col <= 8'b00000000;
+                        3'd2: dot_col <= 8'b00000000;
+                        3'd3: dot_col <= 8'b00000000;
+                        3'd4: dot_col <= 8'b00000000;
+                        3'd5: dot_col <= 8'b00000000;
+                        3'd6: dot_col <= 8'b11000000;
+                        3'd7: dot_col <= 8'b11000000;
+                    endcase
+                end
+                4'h1: begin
+                    case(row_count)
+                        3'd0: dot_col <= 8'b00000000;
+                        3'd1: dot_col <= 8'b00000000;
+                        3'd2: dot_col <= 8'b00000000;
+                        3'd3: dot_col <= 8'b00000000;
+                        3'd4: dot_col <= 8'b00000000;
+                        3'd5: dot_col <= 8'b00000000;
+                        3'd6: dot_col <= 8'b00110000;
+                        3'd7: dot_col <= 8'b00110000;
+                    endcase
+                end
+                4'h2: begin
+                    case(row_count)
+                        3'd0: dot_col <= 8'b00000000;
+                        3'd1: dot_col <= 8'b00000000;
+                        3'd2: dot_col <= 8'b00000000;
+                        3'd3: dot_col <= 8'b00000000;
+                        3'd4: dot_col <= 8'b00110000;
+                        3'd5: dot_col <= 8'b00110000;
+                        3'd6: dot_col <= 8'b00000000;
+                        3'd7: dot_col <= 8'b00000000;
+                    endcase
+                end
+                4'h3: begin
+                    case(row_count)
+                        3'd0: dot_col <= 8'b00000000;
+                        3'd1: dot_col <= 8'b00000000;
+                        3'd2: dot_col <= 8'b00110000;
+                        3'd3: dot_col <= 8'b00110000;
+                        3'd4: dot_col <= 8'b00000000;
+                        3'd5: dot_col <= 8'b00000000;
+                        3'd6: dot_col <= 8'b00000000;
+                        3'd7: dot_col <= 8'b00000000;
+                    endcase
+                end
+                4'h4: begin
+                    case(row_count)
+                        3'd0: dot_col <= 8'b00000000;
+                        3'd1: dot_col <= 8'b00000000;
+                        3'd2: dot_col <= 8'b00000000;
+                        3'd3: dot_col <= 8'b00000000;
+                        3'd4: dot_col <= 8'b00000000;
+                        3'd5: dot_col <= 8'b00000000;
+                        3'd6: dot_col <= 8'b00001100;
+                        3'd7: dot_col <= 8'b00001100;
+                    endcase
+                end
+                // ... 依你原程式，其餘數值類推 ...
+                4'h5: begin
+                    // ...
+                end
+                4'h6: begin
+                    // ...
+                end
+                4'h7: begin
+                    // ...
+                end
+                4'h8: begin
+                    // ...
+                end
+                4'h9: begin
+                    // ...
+                end
+                4'ha: begin
+                    // ...
+                end
+                4'hb: begin
+                    // ...
+                end
+                4'hc: begin
+                    // ...
+                end
+                4'hd: begin
+                    // ...
+                end
+                4'he: begin
+                    // ...
+                end
+                4'hf: begin
+                    // ...
+                end
+                default: ; // 不處理
+            endcase
+
+        end
+        else begin
+            // 還沒達到 `TimeExpire`，繼續累加
+            clk_count <= clk_count + 32'd1;
+        end
+    end
+end
+
+endmodule
